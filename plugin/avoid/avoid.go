@@ -9,11 +9,18 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"strings"
+	"sync"
 
 	"github.com/coredns/coredns/request"
-
 	"github.com/miekg/dns"
+	log "github.com/sirupsen/logrus"
+)
+
+// TODO: Move from global dict to in-memory storage structure (e.g., memcached or redis)
+// TODO: Make assumption that there are multiple authorative servers
+var (
+	LookupTable = make(map[string]*avoid.DNSEntry{})
+	mutex       sync.Mutex
 )
 
 // Avoid is a plugin in CoreDNS
@@ -23,24 +30,60 @@ type Avoid struct{}
 func (p Avoid) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	state := request.Request{W: w, Req: r}
 	qname := state.Name()
+	log.Infof("Received query %s from %s\n", qname, state.IP())
 
-	reply := "8.8.8.8"
-	if strings.HasPrefix(state.IP(), "172.") || strings.HasPrefix(state.IP(), "127.") {
-		reply = "1.1.1.1"
-	}
-	fmt.Printf("Received query %s from %s, expected to reply %s\n", qname, state.IP(), reply)
-
-	answers := []dns.RR{}
-
-	if state.QType() != dns.TypeA {
+	if state.QType() != dns.TypeA || state.QType() != dns.TypeAAAA {
+		log.Errorf("invalid request type for this plugin: %v\n", state.QType)
 		return dns.RcodeNameError, nil
 	}
 
-	rr := new(dns.A)
-	rr.Hdr = dns.RR_Header{Name: qname, Rrtype: dns.TypeA, Class: dns.ClassINET}
-	rr.A = net.ParseIP(reply).To4()
+	// check if the identifier is in our lookup table - for now this is just
+	// using the source IP, and we may get into trouble is there is proxy
+	// DNS as then we will need to continiously probe the path
+	val, ok := LookupTable[state.IP()]
+	if ok {
+		// we have an entry
+	} else {
+		// we need to use the default entry
 
-	answers = append(answers, rr)
+		// TODO: use config file to set default key for deployments
+		val2, ok2 := LookupTable[avoid.Default]
+		if !ok2 {
+			errMsg := fmt.Errorf("Missing default dns entry in table for: %s", avoid.Default)
+			log.Error(errMsg)
+			return nil, errMsg
+		}
+		// set value to be the default entry
+		val = val2
+	}
+
+	// now we need to check what type of entry we are creating and responding to
+	// based on the identification we used into the lookup table
+
+	addr, err := net.ParseAddr(state.IP())
+	if err != nil {
+		log.Errorf("failed to parse incoming requests ip address: %v", err)
+		return nil, err
+	}
+
+	answers := []dns.RR{}
+	if addr.Is4() {
+		for record := range val.A {
+			rr := new(dns.A)
+			rr.Hdr = dns.RR_Header{Name: qname, Rrtype: dns.TypeA, Class: dns.ClassINET}
+			rr.A = net.ParseIP(record).To4()
+			answers = append(answers, rr)
+		}
+	}
+
+	if addr.Is6() {
+		for record := range val.AAAA {
+			rr := new(dns.AAAA)
+			rr.Hdr = dns.RR_Header{Name: qname, Rrtype: dns.TypeAAAA, Class: dns.ClassINET}
+			rr.AAAA = net.ParseIP(record).To6()
+			answers = append(answers, rr)
+		}
+	}
 
 	m := new(dns.Msg)
 	m.SetReply(r)
