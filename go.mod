@@ -1,6 +1,8 @@
 module github.com/coredns/coredns
 
-go 1.20
+go 1.21
+
+toolchain go1.21.6
 
 require (
 	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible
@@ -26,7 +28,7 @@ require (
 	github.com/prometheus/common v0.45.0
 	github.com/quic-go/quic-go v0.40.1
 	go.etcd.io/etcd/api/v3 v3.5.12
-	go.etcd.io/etcd/client/v3 v3.5.11
+	go.etcd.io/etcd/client/v3 v3.5.12
 	golang.org/x/crypto v0.18.0
 	golang.org/x/sys v0.16.0
 	google.golang.org/api v0.159.0
@@ -88,6 +90,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.0 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
+	github.com/isi-lincoln/avoid v0.0.3 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -106,9 +109,11 @@ require (
 	github.com/prometheus/procfs v0.11.1 // indirect
 	github.com/quic-go/qtls-go1-20 v0.4.1 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.7.0 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tinylib/msgp v1.1.8 // indirect
-	go.etcd.io/etcd/client/pkg/v3 v3.5.11 // indirect
+	gitlab.com/mergetb/tech/stor v0.1.8 // indirect
+	go.etcd.io/etcd/client/pkg/v3 v3.5.12 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.47.0 // indirect
 	go.opentelemetry.io/otel v1.22.0 // indirect

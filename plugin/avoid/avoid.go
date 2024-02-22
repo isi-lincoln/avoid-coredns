@@ -9,18 +9,17 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"sync"
 
 	"github.com/coredns/coredns/request"
+	pkg "github.com/isi-lincoln/avoid/pkg"
+	avoid "github.com/isi-lincoln/avoid/protocol"
 	"github.com/miekg/dns"
 	log "github.com/sirupsen/logrus"
 )
 
-// TODO: Move from global dict to in-memory storage structure (e.g., memcached or redis)
-// TODO: Make assumption that there are multiple authorative servers
 var (
-	LookupTable = make(map[string]*avoid.DNSEntry{})
-	mutex       sync.Mutex
+	avoidDNSServerHost = "avoid"
+	avoidDNSServerPort = pkg.DefaultAvoidDNSPort
 )
 
 // Avoid is a plugin in CoreDNS
@@ -37,52 +36,42 @@ func (p Avoid) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 		return dns.RcodeNameError, nil
 	}
 
-	// check if the identifier is in our lookup table - for now this is just
-	// using the source IP, and we may get into trouble is there is proxy
-	// DNS as then we will need to continiously probe the path
-	val, ok := LookupTable[state.IP()]
-	if ok {
-		// we have an entry
-	} else {
-		// we need to use the default entry
+	ue := state.IP()
 
-		// TODO: use config file to set default key for deployments
-		val2, ok2 := LookupTable[avoid.Default]
-		if !ok2 {
-			errMsg := fmt.Errorf("Missing default dns entry in table for: %s", avoid.Default)
-			log.Error(errMsg)
-			return nil, errMsg
-		}
-		// set value to be the default entry
-		val = val2
-	}
+	var entry *avoid.DNSEntry
+	pkg.WithAvoidDNS(
+		fmt.Sprintf("%s:%d", avoidDNSServerHost, avoidDNSServerPort),
+		func(c avoid.DNSClient) error {
 
-	// now we need to check what type of entry we are creating and responding to
-	// based on the identification we used into the lookup table
+			log.Infof("requesting: %s/%s from %s:%d", ue, qname, avoidDNSServerHost, avoidDNSServerPort)
 
-	addr, err := net.ParseAddr(state.IP())
-	if err != nil {
-		log.Errorf("failed to parse incoming requests ip address: %v", err)
-		return nil, err
-	}
+			resp, err := c.Show(context.TODO(), &avoid.ShowRequest{
+				Ue:   ue,
+				Name: qname,
+			})
+
+			if err != nil {
+				log.Error(err)
+			}
+
+			entry = resp.Entry
+
+			return nil
+		})
 
 	answers := []dns.RR{}
-	if addr.Is4() {
-		for record := range val.A {
-			rr := new(dns.A)
-			rr.Hdr = dns.RR_Header{Name: qname, Rrtype: dns.TypeA, Class: dns.ClassINET}
-			rr.A = net.ParseIP(record).To4()
-			answers = append(answers, rr)
-		}
+	for _, v4record := range entry.Arecords {
+		rr := new(dns.A)
+		rr.Hdr = dns.RR_Header{Name: qname, Rrtype: dns.TypeA, Class: dns.ClassINET}
+		rr.A = net.ParseIP(v4record).To4()
+		answers = append(answers, rr)
 	}
 
-	if addr.Is6() {
-		for record := range val.AAAA {
-			rr := new(dns.AAAA)
-			rr.Hdr = dns.RR_Header{Name: qname, Rrtype: dns.TypeAAAA, Class: dns.ClassINET}
-			rr.AAAA = net.ParseIP(record).To6()
-			answers = append(answers, rr)
-		}
+	for _, v6record := range entry.Aaaarecords {
+		rr := new(dns.AAAA)
+		rr.Hdr = dns.RR_Header{Name: qname, Rrtype: dns.TypeAAAA, Class: dns.ClassINET}
+		rr.AAAA = net.ParseIP(v6record).To16()
+		answers = append(answers, rr)
 	}
 
 	m := new(dns.Msg)
