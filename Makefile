@@ -35,3 +35,19 @@ pb:
 clean:
 	go clean
 	rm -f coredns
+
+
+REGISTRY ?= docker.io
+REPO ?= isilincoln
+TAG ?= latest
+#BUILD_ARGS ?= --no-cache
+
+docker: $(REGISTRY)/$(REPO)/avoid-coredns
+
+$(REGISTRY)/$(REPO)/avoid-coredns:
+	@docker build ${BUILD_ARGS} $(DOCKER_QUIET) -f Dockerfile -t $(@):$(TAG) .
+	$(if ${PUSH},$(call docker-push))
+
+define docker-push
+	@docker push $(@):$(TAG)
+endef

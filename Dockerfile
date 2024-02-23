@@ -1,7 +1,4 @@
-ARG DEBIAN_IMAGE=debian:stable-slim
-ARG BASE=gcr.io/distroless/static-debian11:nonroot
-FROM --platform=$BUILDPLATFORM ${DEBIAN_IMAGE} AS build
-SHELL [ "/bin/sh", "-ec" ]
+FROM golang:1.22-bullseye as build
 
 RUN export DEBCONF_NONINTERACTIVE_SEEN=true \
            DEBIAN_FRONTEND=noninteractive \
@@ -9,14 +6,29 @@ RUN export DEBCONF_NONINTERACTIVE_SEEN=true \
            TERM=linux ; \
     apt-get -qq update ; \
     apt-get -yyqq upgrade ; \
-    apt-get -yyqq install ca-certificates libcap2-bin; \
+    apt-get -yyqq install \
+        ca-certificates \
+        libcap2-bin \
+        build-essential \
+        make; \
     apt-get clean
-COPY coredns /coredns
-RUN setcap cap_net_bind_service=+ep /coredns
 
-FROM --platform=$TARGETPLATFORM ${BASE}
+COPY . /coredns
+WORKDIR /coredns
+RUN ls
+RUN make coredns
+#RUN setcap cap_net_bind_service=+ep /coredns
+
+FROM debian:stable-slim as final
+RUN apt-get update && \
+    apt-get install -qy \
+        iputils-ping \
+        iproute2 \
+        dnsutils \
+        vim-nox && \
+    apt-get clean
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=build /coredns /coredns
-USER nonroot:nonroot
 EXPOSE 53 53/udp
-ENTRYPOINT ["/coredns"]
+EXPOSE 853 853/udp
+CMD /coredns/coredns -conf /etc/coredns/Corefile
