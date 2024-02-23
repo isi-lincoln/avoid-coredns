@@ -20,8 +20,8 @@ import (
 var (
 	// TODO: have this be a passed in value.
 	// we'd likely need to do it through the Corefile plugin
-	avoidDNSServerHost = "avoid"
-	avoidDNSServerPort = pkg.DefaultAvoidDNSPort
+	AvoidDNSServerHost = "avoid"
+	AvoidDNSServerPort = pkg.DefaultAvoidDNSPort
 )
 
 // Avoid is a plugin in CoreDNS
@@ -30,6 +30,8 @@ type Avoid struct{}
 // TODO: default lookup if the value is not stored
 // Need cache default and have an etcd watch on default key
 // so we can maintain sychronization
+
+// TODO: use appropriate dns return values
 
 // ServeDNS implements the plugin.Handler interface.
 func (p Avoid) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
@@ -42,22 +44,30 @@ func (p Avoid) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 		return dns.RcodeNameError, nil
 	}
 
+	// TODO: Maybe we want want to keep root for disabuiguity, but for
+	// now its more annoying to remember to use it
+	querySize := len(qname)
+	if querySize <= 1 {
+		return 1, fmt.Errorf("query is on nothing or root, disallow: %s", qname)
+	}
+	query := qname[:querySize-1]
+
 	ue := state.IP()
 
 	var entry *avoid.DNSEntry
 	err := pkg.WithAvoidDNS(
-		fmt.Sprintf("%s:%d", avoidDNSServerHost, avoidDNSServerPort),
+		fmt.Sprintf("%s:%d", AvoidDNSServerHost, AvoidDNSServerPort),
 		func(c avoid.AVOIDDNSClient) error {
 
-			log.Infof("%s: requesting: %s/%s from %s:%d", p.Name(), ue, qname, avoidDNSServerHost, avoidDNSServerPort)
+			log.Infof("%s: requesting: %s/%s from %s:%d", p.Name(), ue, query, AvoidDNSServerHost, AvoidDNSServerPort)
 
 			resp, err := c.Show(context.TODO(), &avoid.ShowRequest{
 				Ue:   ue,
-				Name: qname,
+				Name: query,
 			})
 
 			if err != nil {
-				log.Error(err)
+				log.Error("%s: Show(): %v", p.Name(), err)
 			}
 
 			entry = resp.Entry
@@ -65,7 +75,7 @@ func (p Avoid) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 			return nil
 		})
 	if err != nil {
-		log.Errorf("%s: Error retrieving record: %v\n", p.Name(), err)
+		log.Errorf("%s: Protocol: Error retrieving record: %v\n", p.Name(), err)
 		return 2, err
 	}
 

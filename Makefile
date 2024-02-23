@@ -40,7 +40,7 @@ clean:
 REGISTRY ?= docker.io
 REPO ?= isilincoln
 TAG ?= latest
-#BUILD_ARGS ?= --no-cache
+BUILD_ARGS ?= --no-cache
 
 docker: $(REGISTRY)/$(REPO)/avoid-coredns
 

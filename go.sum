@@ -180,6 +180,8 @@ github.com/isi-lincoln/avoid v0.0.3 h1:ZUMl6XnpwCuYKmL9x+B8TxMt/RJXkY6ULCanrdjMj
 github.com/isi-lincoln/avoid v0.0.3/go.mod h1:zJqsW2MX4wcAIfOP35yZR2GpjLVbXAr8YQSbuAVBrLA=
 github.com/isi-lincoln/avoid v0.0.4 h1:IsAX5noidAjUy8yNh/xqg6juBVjX5TOq4FynSaDETcM=
 github.com/isi-lincoln/avoid v0.0.4/go.mod h1:zJqsW2MX4wcAIfOP35yZR2GpjLVbXAr8YQSbuAVBrLA=
+github.com/isi-lincoln/avoid v0.0.5 h1:EyH63K5VLz2jU3cJ0HgYr8CerkDwvU5+3LhGo1Q3AIQ=
+github.com/isi-lincoln/avoid v0.0.5/go.mod h1:zJqsW2MX4wcAIfOP35yZR2GpjLVbXAr8YQSbuAVBrLA=
 github.com/jmespath/go-jmespath v0.4.0 h1:BEgLn5cpjn8UN1mAw4NjwDrS35OdebyEtFe+9YPoQUg=
 github.com/jmespath/go-jmespath v0.4.0/go.mod h1:T8mJZnbsbmF+m6zOOFylbeCJqk5+pHWvzYPziyZiYoo=
 github.com/jmespath/go-jmespath/internal/testify v1.5.1 h1:shLQSRRSCCPj3f2gpwzGwWFoC7ycTf1rcQZHOlsJ6N8=

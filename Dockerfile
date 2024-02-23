@@ -15,7 +15,6 @@ RUN export DEBCONF_NONINTERACTIVE_SEEN=true \
 
 COPY . /coredns
 WORKDIR /coredns
-RUN ls
 RUN make coredns
 #RUN setcap cap_net_bind_service=+ep /coredns
 
