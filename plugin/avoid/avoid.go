@@ -51,6 +51,7 @@ func (p Avoid) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 		return 1, fmt.Errorf("query is on nothing or root, disallow: %s", qname)
 	}
 	query := qname[:querySize-1]
+	log.Infof("%s: Rewritten query %s\n", p.Name(), query)
 
 	ue := state.IP()
 
