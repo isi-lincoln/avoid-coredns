@@ -37,7 +37,7 @@ func (p Avoid) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	qname := state.Name()
 	log.Infof("%s: Received query %s from %s\n", p.Name(), qname, state.IP())
 
-	if state.QType() != dns.TypeA || state.QType() != dns.TypeAAAA {
+	if state.QType() != dns.TypeA && state.QType() != dns.TypeAAAA {
 		log.Errorf("invalid request type for this plugin: %v\n", state.QType)
 		return dns.RcodeNameError, nil
 	}
