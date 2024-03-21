@@ -1,4 +1,4 @@
-module github.com/coredns/coredns
+module github.com/isi-lincoln/avoid-coredns
 
 go 1.21
 
